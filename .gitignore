@@ -28,7 +28,8 @@ tmp/
 *.pt
 *.pth
 *.onnx
-models/
+/models/
+/backend/models/
 .cache/
 huggingface/
 
