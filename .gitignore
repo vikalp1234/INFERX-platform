@@ -1,0 +1,57 @@
+# --- Secrets and credentials (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*credentials*.json
+service-account*.json
+secrets/
+
+# --- Local data, dumps, logs ---
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+*.log
+logs/
+tmp/
+
+# --- Model artifacts and caches ---
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+*.onnx
+models/
+.cache/
+huggingface/
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+
+# --- OS / IDE / notebooks ---
+.DS_Store
+.idea/
+.vscode/
+.ipynb_checkpoints/
+
+# --- Local agent scratch ---
+.superpowers/
