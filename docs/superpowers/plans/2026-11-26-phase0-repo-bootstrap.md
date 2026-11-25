@@ -99,7 +99,7 @@ Run: `git config user.name "<name>" && git config user.email "<id>+vikalp1234@us
 - [ ] **Step 2: Create `.gitignore`** covering exactly these groups (policy §4):
   - Secrets: `.env`, `.env.*`, `!.env.example`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.crt` (private-material certs), `*credentials*.json`, `service-account*.json`, `secrets/`
   - Data: `*.db`, `*.sqlite`, `*.sqlite3`, `*.dump`, `*.sql.gz`, `*.log`, `logs/`, `tmp/`
-  - Models/caches: `*.safetensors`, `*.bin`, `*.gguf`, `*.pt`, `*.pth`, `*.onnx`, `models/`, `.cache/`, `huggingface/`
+  - Models/caches: `*.safetensors`, `*.bin`, `*.gguf`, `*.pt`, `*.pth`, `*.onnx`, `/models/` and `/backend/models/` (root-anchored so `app/domain/models/` stays trackable), `.cache/`, `huggingface/`
   - Python: `__pycache__/`, `*.pyc`, `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.mypy_cache/`, `dist/`, `build/`, `*.egg-info/`
   - Node/frontend: `node_modules/`, `frontend/dist/`
   - OS/IDE: `.DS_Store`, `.idea/`, `.vscode/` (except none allowed), notebooks checkpoints `.ipynb_checkpoints/`
@@ -239,11 +239,12 @@ Expected: `2 passed`; ruff clean.
 ```bash
 S=$(mktemp -d) && cd "$S" && git init -q && cp "<repo>/.pre-commit-config.yaml" .
 pre-commit install
-printf 'aws_access_key_id = AKIAIOSFODNN7EXAMPLE\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\n' > leak.txt
+T=$(python3 -c "import secrets,string;print('ghp_'+''.join(secrets.choice(string.ascii_letters+string.digits) for _ in range(36)))")
+echo "github_token = \"$T\"" > leak.txt
 git add leak.txt && git commit -m "test"
 ```
 
-Expected: commit **fails** with a gitleaks finding. Delete `$S` afterward. If it passes, the hook is mis-configured — fix before continuing.
+Expected: commit **fails** with a gitleaks `github-pat` finding. (Do not use AWS's documented `...EXAMPLE` keys: gitleaks allowlists them, so they pass.) Delete `$S` afterward. If it passes, the hook is mis-configured — fix before continuing.
 
 - [ ] **Step 4: Verify clean tree passes**: `pre-commit run --all-files` → all Passed.
 - [ ] **Step 5: Commit** — `ci: add pre-commit with gitleaks, ruff, and hygiene hooks`
