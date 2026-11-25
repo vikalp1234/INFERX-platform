@@ -281,6 +281,7 @@ The application must not depend directly on a single runtime's internal API.
 ```python
 from typing import Protocol, Iterator
 
+
 class InferenceAdapter(Protocol):
     def load(self, model_spec, runtime_config) -> None: ...
     def unload(self) -> None: ...
