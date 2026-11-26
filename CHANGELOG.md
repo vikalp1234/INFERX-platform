@@ -16,6 +16,8 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 ### Security
 - Model revisions must be pinned 40-character SHAs; `trust_remote_code` is always off; prompts and generated text are never logged.
 
+## Phase 0 — repository bootstrap (no release tag)
+
 ### Added
 - Phase 0 repository bootstrap: ignore rules, governance and security docs, community files, uv backend skeleton, secret scanning and CI.
 - Repository ruleset on `main`: pull request required, `secret-scan` and `backend` checks required, force pushes and deletions blocked.
