@@ -37,3 +37,32 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.6",
 ]
+
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture layers"
+type = "layers"
+layers = [
+    "app.bootstrap",
+    "app.adapters | app.infrastructure",
+    "app.application",
+    "app.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain and application are framework-free"
+type = "forbidden"
+source_modules = ["app.domain", "app.application"]
+forbidden_modules = [
+    "fastapi",
+    "pydantic",
+    "pydantic_settings",
+    "starlette",
+    "torch",
+    "transformers",
+    "sqlalchemy",
+    "uvicorn",
+]
