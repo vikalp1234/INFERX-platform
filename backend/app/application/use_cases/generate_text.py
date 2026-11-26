@@ -1,0 +1,32 @@
+import logging
+
+from app.application.dto.limits import InputLimits
+from app.application.ports.outbound.model_execution import ModelExecutionPort
+from app.application.use_cases.validation import validate_prompt
+from app.domain.exceptions import InvalidGenerationConfigError
+from app.domain.inference.generation import GenerationConfig, GenerationResult
+
+logger = logging.getLogger(__name__)
+
+
+class GenerateText:
+    def __init__(self, execution: ModelExecutionPort, limits: InputLimits) -> None:
+        self._execution = execution
+        self._limits = limits
+
+    def execute(self, prompt: str, config: GenerationConfig) -> GenerationResult:
+        validate_prompt(prompt, self._limits)
+        if config.max_new_tokens > self._limits.max_new_tokens:
+            raise InvalidGenerationConfigError(
+                f"max_new_tokens exceeds limit of {self._limits.max_new_tokens}"
+            )
+        try:
+            result = self._execution.generate(prompt, config)
+        except Exception as exc:
+            logger.error("generation_failed", extra={"error_type": type(exc).__name__})
+            raise
+        logger.info(
+            "generation_completed",
+            extra={"prompt_tokens": result.prompt_tokens, "output_tokens": result.output_tokens},
+        )
+        return result
