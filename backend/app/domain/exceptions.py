@@ -35,3 +35,7 @@ class InvalidTimingError(InferxError):
 
 class InvalidArchitectureError(InferxError):
     """Raised for an invalid model architecture description or KV-cache input."""
+
+
+class OverloadedError(InferxError):
+    """The service is at capacity; the request was not (or could not be) admitted."""

@@ -155,3 +155,88 @@ def test_run_metrics_labels_provenance_and_none_for_single_token():
         "value": 64,
         "provenance": "derived_from_model_config",
     }
+
+
+class TestStreamGeneration:
+    def make(self, fake=None, **gate_kwargs):
+        from app.application.services.request_gate import GateConfig, RequestGate
+        from app.application.use_cases.stream_generation import StreamGeneration
+
+        fake = fake or loaded_fake()
+        cfg = {"max_concurrent": 1, "max_waiting": 1, "wait_timeout_s": 1.0, **gate_kwargs}
+        gate = RequestGate(GateConfig(**cfg))
+        return StreamGeneration(fake, LIMITS, gate), fake, gate
+
+    def test_validates_before_touching_port_or_gate(self):
+        uc, fake, gate = self.make()
+        with pytest.raises(InvalidPromptError):
+            uc.execute("   ", GenerationConfig(max_new_tokens=2))
+        with pytest.raises(InvalidGenerationConfigError):
+            uc.execute("hi", GenerationConfig(max_new_tokens=LIMITS.max_new_tokens + 1))
+        assert fake.calls == []
+        assert gate.running == 0
+
+    def test_unloaded_model_raises_eagerly(self):
+        uc, _, _ = self.make(FakeModelExecution())
+        with pytest.raises(ModelNotLoadedError):
+            uc.execute("hi", GenerationConfig(max_new_tokens=2))
+
+    def test_streams_items_and_releases_slot(self):
+        uc, _, gate = self.make()
+        items = list(uc.execute("hi there", GenerationConfig(max_new_tokens=3)))
+        assert len(items) == 4
+        assert gate.running == 0
+
+    def test_closing_early_releases_slot_and_closes_port_stream(self):
+        uc, fake, gate = self.make()
+        stream = uc.execute("hi", GenerationConfig(max_new_tokens=3))
+        next(stream)
+        assert gate.running == 1
+        stream.close()
+        assert gate.running == 0
+        assert fake.streams_closed == 1
+
+    def test_port_failure_mid_stream_releases_slot_and_propagates(self):
+        uc, _, gate = self.make(loaded_fake(fail_after=1))
+        with pytest.raises(InferenceFailedError):
+            list(uc.execute("hi", GenerationConfig(max_new_tokens=3)))
+        assert gate.running == 0
+
+    def test_overloaded_before_stream_starts(self):
+        from app.domain.exceptions import OverloadedError
+
+        uc, _, gate = self.make(max_waiting=0)
+        gate.acquire()
+        with pytest.raises(OverloadedError):
+            uc.execute("hi", GenerationConfig(max_new_tokens=2))
+
+    def test_logs_no_text(self, caplog):
+        marker = "PROMPT-MARKER-xyz"
+        uc, _, _ = self.make()
+        with caplog.at_level(logging.INFO):
+            list(uc.execute(marker, GenerationConfig(max_new_tokens=3)))
+        assert marker not in caplog.text
+        assert "fake" not in caplog.text
+        record = next(r for r in caplog.records if r.message == "stream_completed")
+        assert record.finish_reason == "length"
+
+
+def test_get_model_status_reflects_load_state():
+    from app.application.use_cases.get_model_status import GetModelStatus
+
+    fake = FakeModelExecution()
+    uc = GetModelStatus(fake, SPEC)
+    assert uc.execute().loaded is False
+    fake.load(SPEC)
+    status = uc.execute()
+    assert (status.loaded, status.model_id, status.revision) == (True, SPEC.model_id, SPEC.revision)
+
+
+def test_generate_text_with_gate_releases_slot_after_failure():
+    from app.application.services.request_gate import GateConfig, RequestGate
+
+    gate = RequestGate(GateConfig(1, 0, 1.0))
+    uc = GenerateText(loaded_fake(fail_generate=True), LIMITS, gate)
+    with pytest.raises(InferenceFailedError):
+        uc.execute("hi", GenerationConfig(max_new_tokens=2))
+    assert gate.running == 0

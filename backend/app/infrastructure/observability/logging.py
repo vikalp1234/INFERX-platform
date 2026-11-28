@@ -15,6 +15,8 @@ ALLOWED_EXTRA = (
     "tpot_ms",
     "decode_tps",
     "total_ms",
+    "request_id",
+    "finish_reason",
 )
 
 
