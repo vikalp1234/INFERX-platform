@@ -11,6 +11,7 @@ from app.adapters.inbound.http.generate import generate_router
 from app.adapters.inbound.http.health import health_router
 from app.adapters.inbound.http.model import model_router
 from app.adapters.inbound.http.request_id import RequestIdMiddleware
+from app.adapters.inbound.http.stream import stream_router
 from app.adapters.inbound.http.tokenize import tokenize_router
 from app.bootstrap.container import Container, build_container
 from app.domain.exceptions import InferxError
@@ -49,4 +50,5 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(model_router)
     app.include_router(tokenize_router)
     app.include_router(generate_router)
+    app.include_router(stream_router)
     return app

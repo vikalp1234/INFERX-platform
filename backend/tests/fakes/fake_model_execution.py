@@ -33,10 +33,13 @@ class FakeModelExecution:
         tick_ns: int = 1_000_000,
         delay_s: float = 0.0,
         fail_after: int | None = None,
+        n_pieces: int = 3,
     ) -> None:
+        self.n_pieces = n_pieces  # how many tokens a full generation produces
         self.delay_s = delay_s  # sleep before each streamed delta
         self.fail_after = fail_after  # raise after this many streamed deltas
         self.cancel_observed = False
+        self.deltas_sent = 0
         self.streams_closed = 0
         self.tick_ns = tick_ns
         self.configs: list[GenerationConfig] = []
@@ -66,7 +69,8 @@ class FakeModelExecution:
         return TokenizationResult(tuple(range(len(text.split()))) or (0,))
 
     def _pieces(self, config: GenerationConfig) -> list[str]:
-        pieces = ["fake", " output", " text"][: config.max_new_tokens]
+        base = ["fake", " output", " text"] + [f" w{i}" for i in range(3, self.n_pieces)]
+        pieces = base[: min(self.n_pieces, config.max_new_tokens)]
         if not config.is_greedy and config.seed is not None:
             pieces[0] = f"fake{config.seed % 1000}"
         return pieces
@@ -114,6 +118,7 @@ class FakeModelExecution:
                 if self.fail_after is not None and index >= self.fail_after:
                     raise InferenceFailedError("generation failed")
                 sent.append(piece)
+                self.deltas_sent += 1
                 yield TokenDelta(index, piece)
             reason = self._finish_reason(config, len(sent))
             if cancel is not None and cancel.is_set():

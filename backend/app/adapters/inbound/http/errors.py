@@ -38,18 +38,23 @@ def error_response(
     return JSONResponse(envelope_body(code, message, request_id), status, headers)
 
 
-def _domain_response(exc: InferxError, request_id: str) -> JSONResponse:
+def describe_error(exc: Exception) -> tuple[int, str, str]:
+    """Map an exception to (status, code, message). Never includes user input."""
     if isinstance(exc, InvalidPromptError | InvalidGenerationConfigError):
-        return error_response(422, "invalid_request", str(exc), request_id)
+        return 422, "invalid_request", str(exc)
     if isinstance(exc, ModelNotLoadedError):
-        return error_response(409, "model_not_loaded", "model is not loaded", request_id)
+        return 409, "model_not_loaded", "model is not loaded"
     if isinstance(exc, OverloadedError):
-        return error_response(
-            429, "overloaded", "server is at capacity", request_id, {"Retry-After": "1"}
-        )
+        return 429, "overloaded", "server is at capacity"
     if isinstance(exc, InferenceFailedError):
-        return error_response(500, "inference_failed", "inference failed", request_id)
-    return error_response(500, "internal_error", "internal error", request_id)
+        return 500, "inference_failed", "inference failed"
+    return 500, "internal_error", "internal error"
+
+
+def _domain_response(exc: InferxError, request_id: str) -> JSONResponse:
+    status, code, message = describe_error(exc)
+    headers = {"Retry-After": "1"} if status == 429 else None
+    return error_response(status, code, message, request_id, headers)
 
 
 _HTTP_CODES = {404: "not_found", 405: "method_not_allowed", 413: "payload_too_large"}
