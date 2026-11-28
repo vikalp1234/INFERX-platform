@@ -19,3 +19,10 @@ def test_load_without_ml_extra_raises_model_load_error_with_hint():
     with pytest.raises(ModelLoadError, match="uv sync --extra ml"):
         adapter.load(spec)
     assert adapter.is_loaded() is False
+
+
+def test_architecture_before_load_raises_not_loaded():
+    from app.domain.exceptions import ModelNotLoadedError
+
+    with pytest.raises(ModelNotLoadedError):
+        TransformersInferenceAdapter().architecture()
