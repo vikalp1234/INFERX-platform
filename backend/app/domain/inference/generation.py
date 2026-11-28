@@ -1,7 +1,14 @@
 from dataclasses import dataclass
+from enum import StrEnum
 
 from app.domain.exceptions import InvalidGenerationConfigError
 from app.domain.inference.timings import GenerationTimings
+
+
+class FinishReason(StrEnum):
+    STOP = "stop"  # end-of-sequence token produced
+    LENGTH = "length"  # max_new_tokens reached
+    CANCELLED = "cancelled"  # stopped by the caller
 
 
 @dataclass(frozen=True)
@@ -49,6 +56,7 @@ class GenerationResult:
     prompt_tokens: int
     output_tokens: int
     timings: GenerationTimings | None = None
+    finish_reason: FinishReason | None = None
 
 
 @dataclass(frozen=True)
