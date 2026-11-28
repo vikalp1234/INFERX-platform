@@ -54,3 +54,10 @@ The maintainer owns repository security policy, protected-branch settings, scann
 - Protect `main` and release branches; require CI checks and maintainer approval.
 - Keep deployment secrets in the hosting provider's secret manager.
 - Add a security section to the contributor guide explaining how to report accidental exposure privately.
+
+### 9. HTTP API trust boundary (v0.3.0)
+
+- The API has **no authentication or authorization** yet. Bind to loopback (the default) or a trusted network; do not expose it publicly.
+- Requests cannot select a model, load or unload models, or run code; unknown JSON fields are rejected.
+- Prompts and generated text are never written to logs or error bodies; request IDs from clients are validated before use.
+- Inputs are bounded (prompt length, output tokens, body size) and concurrency/waiting is bounded per process. Rate limiting per user arrives with identity (v3.3 / v4.0).

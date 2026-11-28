@@ -4,6 +4,22 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-28
+
+### Added
+- HTTP API: `GET /v1/model`, `POST /v1/tokenize`, `POST /v1/generate`, `POST /v1/generate/stream` (Server-Sent Events with `token` events and exactly one terminal `done` or `error`).
+- Request IDs (`X-Request-ID`, validated), a stable error envelope, strict typed schemas, request body size limit.
+- `RequestGate`: bounded concurrency and bounded waiting with overload responses (429 + `Retry-After`).
+- `ModelExecutionPort.stream_generate` with cancellation; `finish_reason` on results; multi-byte-safe incremental decoding.
+- Optional model autoload at startup (`INFERX_AUTOLOAD_MODEL`), new limits settings.
+- Docs: API reference, v0.3.0 component graph, verification evidence, HTTP trust-boundary section in the security policy.
+
+### Security
+- The API has no authentication in this release: local or trusted-network use only (default bind loopback). Requests cannot choose models; unknown fields are rejected; prompts and generated text are never logged or echoed in errors.
+
+### Notes
+- A client that disconnects while still waiting for a slot is noticed only when the wait ends (at most `INFERX_QUEUE_WAIT_TIMEOUT_S`).
+
 ## [0.2.0] - 2026-11-28
 
 ### Added
