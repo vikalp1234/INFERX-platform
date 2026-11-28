@@ -4,6 +4,21 @@ All notable changes are documented here. Format: [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-28
+
+### Added
+- Sampling controls in `GenerationConfig`: `temperature` (0 = greedy), `top_k`, `top_p`, `repetition_penalty`, `seed`; invalid or contradictory combinations are rejected.
+- `GenerationTimings` (TTFT, TPOT, decode TPS, total, raw per-token stamps) captured by the Transformers adapter with documented measurement boundaries.
+- Derived KV-cache size estimate (`ModelArchitecture`, `estimate_kv_cache`, `EstimateKvCache`), labelled `derived_from_model_config`.
+- CLI flags `--temperature --top-k --top-p --repetition-penalty --seed --metrics`; metrics JSON on stderr with a provenance label per value.
+- Docs: inference mechanics, v0.2.0 component graph, verification evidence; an output-free notebook.
+
+### Changed
+- `ModelExecutionPort` gained `architecture()`; `generate()` results carry `timings`. Log allowlist gained numeric timing fields (still no prompt or response text).
+
+### Notes
+- Stop sequences, HTTP endpoints and percentile reporting are out of scope (v1.2.x, v0.3.0, v2.0.0).
+
 ## [0.1.0] - 2026-11-26
 
 ### Added

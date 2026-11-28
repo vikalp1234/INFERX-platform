@@ -4,13 +4,14 @@
 
 INFERX is an open-source engineering platform to understand, inspect, measure, compare and optimize LLM inference and model serving. It is not just a chatbot.
 
-> **Status: pre-release (v0.1.0 candidate).** Only the items marked IMPLEMENTED below exist; everything else is a roadmap target.
+> **Status: pre-release (v0.2.0 candidate).** Only the items marked IMPLEMENTED below exist; everything else is a roadmap target.
 
 ## Roadmap status
 
 | Capability | Target | Status |
 |---|---|---|
 | Transformers inference | v0.1 | IMPLEMENTED (see [evidence](docs/v0.1.0-verification.md)) |
+| Sampling controls, per-request timings, KV estimate | v0.2 | IMPLEMENTED (see [evidence](docs/v0.2.0-verification.md)) |
 | SSE streaming | v0.3 | PLANNED |
 | Core learning platform | v1.0 | PLANNED |
 | Repeatable benchmarks | v2.0 | PLANNED |
@@ -37,11 +38,13 @@ To run a real model locally (downloads weights into your Hugging Face cache):
 cp ../.env.example .env          # local, git-ignored
 uv sync --extra ml
 uv run python -m app.bootstrap.cli "The capital of France is"
+uv run python -m app.bootstrap.cli "The capital of France is" --temperature 0.8 --seed 7 --metrics
 uv run pytest -m model           # real-model contract tests
 ```
 
 ## Documentation
 
+- [Inference mechanics](docs/inference-mechanics.md) · [v0.2.0 verification](docs/v0.2.0-verification.md) · [v0.2.0 component graph](docs/architecture/v0.2.0-components.md) · [Notebook](notebooks/01_inference_mechanics.ipynb)
 - [Approved models](docs/models.md) · [v0.1.0 verification](docs/v0.1.0-verification.md) · [v0.1.0 component graph](docs/architecture/v0.1.0-components.md)
 
 - [Master implementation guide](docs/MASTER_IMPLEMENTATION_GUIDE.md)
