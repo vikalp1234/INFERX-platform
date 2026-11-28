@@ -60,3 +60,45 @@ class ModelExecutionContract:
         assert port.is_loaded() is False
         port.load(VALID_SPEC)
         assert port.is_loaded() is True
+
+    def test_generate_returns_timings_with_one_stamp_per_token(self, port):
+        port.load(VALID_SPEC)
+        result = port.generate("The capital of France is", GenerationConfig(max_new_tokens=4))
+        assert result.timings is not None
+        assert len(result.timings.token_timestamps_ns) == result.output_tokens
+
+    def test_timestamps_are_monotonic(self, port):
+        port.load(VALID_SPEC)
+        result = port.generate("The capital of France is", GenerationConfig(max_new_tokens=4))
+        stamps = (
+            result.timings.request_start_ns,
+            *result.timings.token_timestamps_ns,
+            result.timings.end_ns,
+        )
+        assert list(stamps) == sorted(stamps)
+
+    def test_architecture_requires_loaded_model(self, port):
+        with pytest.raises(ModelNotLoadedError):
+            port.architecture()
+
+    def test_architecture_after_load_has_positive_fields(self, port):
+        port.load(VALID_SPEC)
+        arch = port.architecture()
+        assert arch.num_layers >= 1
+        assert arch.num_kv_heads >= 1
+        assert arch.head_dim >= 1
+        assert arch.dtype_bytes >= 1
+
+    def test_same_seed_same_text(self, port):
+        port.load(VALID_SPEC)
+        cfg = GenerationConfig(max_new_tokens=6, temperature=0.8, seed=7)
+        first = port.generate("The capital of France is", cfg)
+        second = port.generate("The capital of France is", cfg)
+        assert first.text == second.text
+
+    def test_greedy_ignores_seed_and_is_stable(self, port):
+        port.load(VALID_SPEC)
+        prompt = "The capital of France is"
+        a = port.generate(prompt, GenerationConfig(max_new_tokens=5, seed=1))
+        b = port.generate(prompt, GenerationConfig(max_new_tokens=5, seed=2))
+        assert a.text == b.text
