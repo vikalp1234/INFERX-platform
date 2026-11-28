@@ -73,3 +73,44 @@ def test_all_domain_errors_derive_from_inferx_error():
         InferenceFailedError,
     ):
         assert issubclass(error, InferxError)
+
+
+class TestGenerationConfigSampling:
+    def test_defaults_are_greedy(self):
+        assert GenerationConfig(max_new_tokens=8).is_greedy is True
+
+    def test_sampling_config_accepted(self):
+        cfg = GenerationConfig(temperature=0.8, top_k=40, top_p=0.9, seed=1)
+        assert cfg.is_greedy is False
+
+    def test_rejects_negative_temperature(self):
+        with pytest.raises(InvalidGenerationConfigError):
+            GenerationConfig(temperature=-0.1)
+
+    @pytest.mark.parametrize("top_k", [0, -1, True])
+    def test_rejects_top_k_below_one(self, top_k):
+        with pytest.raises(InvalidGenerationConfigError):
+            GenerationConfig(temperature=0.7, top_k=top_k)
+
+    @pytest.mark.parametrize("top_p", [0.0, 1.01, -0.5])
+    def test_rejects_top_p_outside_range(self, top_p):
+        with pytest.raises(InvalidGenerationConfigError):
+            GenerationConfig(temperature=0.7, top_p=top_p)
+
+    def test_accepts_top_p_of_one(self):
+        assert GenerationConfig(temperature=0.7, top_p=1.0).top_p == 1.0
+
+    @pytest.mark.parametrize("penalty", [0.0, -1.0])
+    def test_rejects_non_positive_repetition_penalty(self, penalty):
+        with pytest.raises(InvalidGenerationConfigError):
+            GenerationConfig(repetition_penalty=penalty)
+
+    @pytest.mark.parametrize("seed", [-1, True])
+    def test_rejects_invalid_seed(self, seed):
+        with pytest.raises(InvalidGenerationConfigError):
+            GenerationConfig(temperature=0.7, seed=seed)
+
+    @pytest.mark.parametrize("kwargs", [{"top_k": 5}, {"top_p": 0.9}])
+    def test_greedy_with_sampling_filters_is_rejected(self, kwargs):
+        with pytest.raises(InvalidGenerationConfigError):
+            GenerationConfig(temperature=0.0, **kwargs)
