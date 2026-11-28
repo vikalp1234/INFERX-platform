@@ -4,6 +4,8 @@ import sys
 from datetime import UTC, datetime
 from typing import TextIO
 
+from app.application.request_context import request_id_var
+
 # Only these extra fields may appear in logs. Prompts and generated text are never allowed.
 ALLOWED_EXTRA = (
     "model_id",
@@ -15,7 +17,20 @@ ALLOWED_EXTRA = (
     "tpot_ms",
     "decode_tps",
     "total_ms",
+    "request_id",
+    "finish_reason",
 )
+
+
+class RequestIdFilter(logging.Filter):
+    """Attach the current request ID (if any) to every record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "request_id"):
+            request_id = request_id_var.get()
+            if request_id is not None:
+                record.request_id = request_id
+        return True
 
 
 class JsonFormatter(logging.Formatter):
@@ -40,5 +55,6 @@ def configure_logging(level: str, stream: TextIO | None = None) -> None:
     handler = logging.StreamHandler(stream or sys.stdout)
     handler._inferx = True  # type: ignore[attr-defined]
     handler.setFormatter(JsonFormatter())
+    handler.addFilter(RequestIdFilter())
     root.addHandler(handler)
     root.setLevel(level.upper())

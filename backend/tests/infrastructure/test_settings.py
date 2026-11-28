@@ -45,3 +45,27 @@ def test_non_positive_limits_rejected(monkeypatch, name, value):
     monkeypatch.setenv(name, value)
     with pytest.raises(ValidationError):
         Settings(_env_file=None)
+
+
+def test_v03_defaults():
+    s = Settings(_env_file=None)
+    assert s.autoload_model is False
+    assert (s.max_concurrent_requests, s.max_waiting_requests) == (1, 4)
+    assert s.queue_wait_timeout_s == 30
+    assert s.max_body_bytes == 65536
+    gate = s.to_gate_config()
+    assert (gate.max_concurrent, gate.max_waiting, gate.wait_timeout_s) == (1, 4, 30)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"max_concurrent_requests": 0},
+        {"max_waiting_requests": -1},
+        {"queue_wait_timeout_s": 0},
+        {"max_body_bytes": 10},
+    ],
+)
+def test_v03_settings_bounds_rejected(kwargs):
+    with pytest.raises(ValueError):
+        Settings(_env_file=None, **kwargs)

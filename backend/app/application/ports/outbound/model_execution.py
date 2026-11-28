@@ -1,3 +1,5 @@
+import threading
+from collections.abc import Iterator
 from typing import Protocol
 
 from app.domain.inference.generation import (
@@ -6,6 +8,7 @@ from app.domain.inference.generation import (
     TokenizationResult,
 )
 from app.domain.inference.kv_cache import ModelArchitecture
+from app.domain.inference.streaming import StreamItem
 from app.domain.models.model_spec import ModelSpec
 
 
@@ -17,6 +20,10 @@ class ModelExecutionPort(Protocol):
     - ``tokenize``/``generate`` before a successful load raise ``ModelNotLoadedError``.
     - Runtime failures raise ``InferenceFailedError``.
     - ``unload`` is idempotent.
+    - ``stream_generate`` yields zero or more ``TokenDelta`` (indices 0, 1, 2, ...) then
+      exactly one ``StreamFinished``; setting ``cancel`` ends it early with
+      ``finish_reason=CANCELLED``; it raises ``ModelNotLoadedError`` on the first step when
+      unloaded; closing the iterator early stops the work and frees the port.
     - ``generate`` returns timings with one stamp per output token; ``architecture``
       requires a loaded model.
     """
@@ -32,3 +39,7 @@ class ModelExecutionPort(Protocol):
     def generate(self, prompt: str, config: GenerationConfig) -> GenerationResult: ...
 
     def architecture(self) -> ModelArchitecture: ...
+
+    def stream_generate(
+        self, prompt: str, config: GenerationConfig, cancel: threading.Event | None = None
+    ) -> Iterator[StreamItem]: ...

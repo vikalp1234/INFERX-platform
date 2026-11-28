@@ -1,9 +1,12 @@
 """Shared behavior every ModelExecutionPort implementation must satisfy."""
 
+import threading
+
 import pytest
 
 from app.domain.exceptions import ModelLoadError, ModelNotLoadedError
-from app.domain.inference.generation import GenerationConfig
+from app.domain.inference.generation import FinishReason, GenerationConfig
+from app.domain.inference.streaming import StreamFinished, TokenDelta
 from app.domain.models.model_spec import ModelSpec
 
 PINNED = "a10cc1512eabd3dde888204e902eca88bddb4951"
@@ -102,3 +105,44 @@ class ModelExecutionContract:
         a = port.generate(prompt, GenerationConfig(max_new_tokens=5, seed=1))
         b = port.generate(prompt, GenerationConfig(max_new_tokens=5, seed=2))
         assert a.text == b.text
+
+    def test_stream_yields_deltas_then_one_finish(self, port):
+        port.load(VALID_SPEC)
+        items = list(
+            port.stream_generate("The capital of France is", GenerationConfig(max_new_tokens=6))
+        )
+        deltas, last = items[:-1], items[-1]
+        assert isinstance(last, StreamFinished)
+        assert all(isinstance(d, TokenDelta) for d in deltas)
+        assert [d.index for d in deltas] == list(range(len(deltas)))
+        assert last.result.finish_reason in set(FinishReason)
+        assert "".join(d.text for d in deltas) == last.result.text
+
+    def test_stream_before_load_raises(self, port):
+        with pytest.raises(ModelNotLoadedError):
+            next(iter(port.stream_generate("hello", GenerationConfig(max_new_tokens=2))))
+
+    def test_stream_cancel_event_ends_with_cancelled(self, port):
+        port.load(VALID_SPEC)
+        cancel = threading.Event()
+        stream = port.stream_generate(
+            "Once upon a time there was a dragon who", GenerationConfig(max_new_tokens=48), cancel
+        )
+        items = []
+        for item in stream:
+            items.append(item)
+            if isinstance(item, TokenDelta):
+                cancel.set()
+        assert isinstance(items[-1], StreamFinished)
+        assert items[-1].result.finish_reason is FinishReason.CANCELLED
+        assert items[-1].result.output_tokens < 48
+
+    def test_closing_stream_early_allows_next_generate(self, port):
+        port.load(VALID_SPEC)
+        stream = port.stream_generate(
+            "Once upon a time there was a dragon who", GenerationConfig(max_new_tokens=48)
+        )
+        next(stream)
+        stream.close()
+        result = port.generate("Hello", GenerationConfig(max_new_tokens=2))
+        assert result.output_tokens >= 1

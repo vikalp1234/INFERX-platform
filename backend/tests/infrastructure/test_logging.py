@@ -50,3 +50,18 @@ def test_timing_fields_are_allowlisted():
     payload = json.loads(stream.getvalue().splitlines()[-1])
     assert payload["ttft_ms"] == 1.5 and payload["total_ms"] == 4.0
     assert "prompt" not in payload
+
+
+def test_request_id_and_finish_reason_allowlisted():
+    import io
+    import json
+    import logging
+
+    from app.infrastructure.observability.logging import configure_logging
+
+    stream = io.StringIO()
+    configure_logging("INFO", stream)
+    logging.getLogger("t").info("m", extra={"request_id": "abc", "finish_reason": "stop"})
+    payload = json.loads(stream.getvalue().splitlines()[-1])
+    assert payload["request_id"] == "abc"
+    assert payload["finish_reason"] == "stop"
