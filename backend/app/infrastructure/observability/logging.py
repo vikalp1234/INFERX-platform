@@ -5,7 +5,17 @@ from datetime import UTC, datetime
 from typing import TextIO
 
 # Only these extra fields may appear in logs. Prompts and generated text are never allowed.
-ALLOWED_EXTRA = ("model_id", "revision", "prompt_tokens", "output_tokens", "error_type")
+ALLOWED_EXTRA = (
+    "model_id",
+    "revision",
+    "prompt_tokens",
+    "output_tokens",
+    "error_type",
+    "ttft_ms",
+    "tpot_ms",
+    "decode_tps",
+    "total_ms",
+)
 
 
 class JsonFormatter(logging.Formatter):

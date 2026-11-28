@@ -105,3 +105,53 @@ def test_use_cases_never_log_prompt(caplog):
     assert marker not in caplog.text
     for record in caplog.records:
         assert marker not in str(record.__dict__)
+
+
+def test_generate_passes_sampling_config_to_port():
+    fake = loaded_fake()
+    cfg = GenerationConfig(max_new_tokens=3, temperature=0.7, top_k=10, top_p=0.9, seed=5)
+    GenerateText(fake, LIMITS).execute("hello", cfg)
+    assert fake.configs == [cfg]
+
+
+def test_generate_logs_timing_numbers_but_no_text(caplog):
+    marker = "PROMPT-MARKER-xyz"
+    fake = loaded_fake()
+    with caplog.at_level(logging.INFO):
+        GenerateText(fake, LIMITS).execute(marker, GenerationConfig(max_new_tokens=3))
+    record = next(r for r in caplog.records if r.message == "generation_completed")
+    assert record.ttft_ms == 1.0
+    assert record.total_ms == 4.0
+    assert marker not in caplog.text
+    assert "fake output" not in caplog.text
+
+
+def test_estimate_kv_cache_matches_hand_computed_value():
+    from app.application.use_cases.estimate_kv_cache import EstimateKvCache
+
+    est = EstimateKvCache(loaded_fake()).execute(tokens=10)
+    assert est.bytes == 2 * 2 * 2 * 4 * 2 * 10
+    assert est.provenance == "derived_from_model_config"
+
+
+def test_estimate_kv_cache_requires_loaded_model():
+    from app.application.use_cases.estimate_kv_cache import EstimateKvCache
+
+    with pytest.raises(ModelNotLoadedError):
+        EstimateKvCache(FakeModelExecution()).execute(tokens=10)
+
+
+def test_run_metrics_labels_provenance_and_none_for_single_token():
+    from app.application.dto.metrics import RunMetrics
+    from app.domain.inference.kv_cache import KvCacheEstimate
+
+    result = loaded_fake().generate("a b", GenerationConfig(max_new_tokens=1))
+    data = RunMetrics.from_result(result, KvCacheEstimate(bytes=64, tokens=3)).to_dict()
+    assert data["ttft_ms"] == {"value": 1.0, "provenance": "measured"}
+    assert data["tpot_ms"]["value"] is None
+    assert data["decode_tps"]["value"] is None
+    assert data["output_tokens"]["provenance"] == "measured"
+    assert data["kv_cache_bytes_estimate"] == {
+        "value": 64,
+        "provenance": "derived_from_model_config",
+    }

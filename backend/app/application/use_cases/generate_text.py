@@ -25,8 +25,16 @@ class GenerateText:
         except Exception as exc:
             logger.error("generation_failed", extra={"error_type": type(exc).__name__})
             raise
-        logger.info(
-            "generation_completed",
-            extra={"prompt_tokens": result.prompt_tokens, "output_tokens": result.output_tokens},
-        )
+        extra: dict[str, object] = {
+            "prompt_tokens": result.prompt_tokens,
+            "output_tokens": result.output_tokens,
+        }
+        if result.timings is not None:
+            extra.update(
+                ttft_ms=result.timings.ttft_ms,
+                tpot_ms=result.timings.tpot_ms,
+                decode_tps=result.timings.decode_tps,
+                total_ms=result.timings.total_ms,
+            )
+        logger.info("generation_completed", extra=extra)
         return result
