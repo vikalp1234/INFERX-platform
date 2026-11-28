@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from app.domain.exceptions import InvalidGenerationConfigError
+from app.domain.inference.timings import GenerationTimings
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ class GenerationResult:
     text: str
     prompt_tokens: int
     output_tokens: int
+    timings: GenerationTimings | None = None
 
 
 @dataclass(frozen=True)
