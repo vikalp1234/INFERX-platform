@@ -1,8 +1,9 @@
 """What the HTTP routes need. Populated by the composition root (bootstrap)."""
 
 from dataclasses import dataclass
+from typing import Annotated
 
-from fastapi import Request
+from fastapi import Depends, Request
 
 from app.application.use_cases.estimate_kv_cache import EstimateKvCache
 from app.application.use_cases.generate_text import GenerateText
@@ -22,3 +23,6 @@ class ApiDependencies:
 
 def get_api_dependencies(request: Request) -> ApiDependencies:
     return request.app.state.api_deps
+
+
+Deps = Annotated[ApiDependencies, Depends(get_api_dependencies)]
