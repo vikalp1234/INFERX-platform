@@ -74,7 +74,11 @@ async def generate_stream(body: GenerateRequest, request: Request, deps: Deps) -
                     envelope = envelope_body(code, message, request_id)
                     yield format_sse("error", envelope)
                     return
-                if disconnected or item is _END:
+                if disconnected:
+                    return
+                if item is _END:  # port ended without a terminal item: never leave a stream open
+                    _, code, message = describe_error(RuntimeError())
+                    yield format_sse("error", envelope_body(code, message, request_id))
                     return
                 if isinstance(item, TokenDelta):
                     yield format_sse("token", {"index": item.index, "text": item.text})

@@ -90,3 +90,17 @@ def test_stream_logs_contain_no_text(caplog):
         stream(client, prompt=MARKER)
     assert MARKER not in caplog.text
     assert "fake" not in caplog.text
+
+
+def test_stream_that_ends_without_finish_still_gets_one_error_terminal():
+    class NoFinish(FakeModelExecution):
+        def stream_generate(self, prompt, config, cancel=None):
+            from app.domain.inference.streaming import TokenDelta
+
+            yield TokenDelta(0, "partial")
+
+    client, _, container = make_client(NoFinish())
+    events = parse_sse(stream(client).text)
+    assert [name for name, _ in events] == ["token", "error"]
+    assert events[-1][1]["error"]["code"] == "internal_error"
+    assert container.gate.running == 0
