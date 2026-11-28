@@ -31,3 +31,7 @@ class InferenceFailedError(InferxError):
 
 class InvalidTimingError(InferxError):
     """Raised when raw timing stamps are inconsistent (non-monotonic)."""
+
+
+class InvalidArchitectureError(InferxError):
+    """Raised for an invalid model architecture description or KV-cache input."""
