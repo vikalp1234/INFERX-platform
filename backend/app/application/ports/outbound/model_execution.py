@@ -5,6 +5,7 @@ from app.domain.inference.generation import (
     GenerationResult,
     TokenizationResult,
 )
+from app.domain.inference.kv_cache import ModelArchitecture
 from app.domain.models.model_spec import ModelSpec
 
 
@@ -16,6 +17,8 @@ class ModelExecutionPort(Protocol):
     - ``tokenize``/``generate`` before a successful load raise ``ModelNotLoadedError``.
     - Runtime failures raise ``InferenceFailedError``.
     - ``unload`` is idempotent.
+    - ``generate`` returns timings with one stamp per output token; ``architecture``
+      requires a loaded model.
     """
 
     def load(self, spec: ModelSpec) -> None: ...
@@ -27,3 +30,5 @@ class ModelExecutionPort(Protocol):
     def tokenize(self, text: str) -> TokenizationResult: ...
 
     def generate(self, prompt: str, config: GenerationConfig) -> GenerationResult: ...
+
+    def architecture(self) -> ModelArchitecture: ...

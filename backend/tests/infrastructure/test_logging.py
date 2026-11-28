@@ -26,3 +26,27 @@ def test_configure_logging_is_idempotent():
     configure_logging("DEBUG")
     handlers = [h for h in logging.getLogger().handlers if getattr(h, "_inferx", False)]
     assert len(handlers) == 1
+
+
+def test_timing_fields_are_allowlisted():
+    import io
+    import json
+    import logging
+
+    from app.infrastructure.observability.logging import configure_logging
+
+    stream = io.StringIO()
+    configure_logging("INFO", stream)
+    logging.getLogger("t").info(
+        "m",
+        extra={
+            "ttft_ms": 1.5,
+            "tpot_ms": 2.0,
+            "decode_tps": 3.0,
+            "total_ms": 4.0,
+            "prompt": "SECRET",
+        },
+    )
+    payload = json.loads(stream.getvalue().splitlines()[-1])
+    assert payload["ttft_ms"] == 1.5 and payload["total_ms"] == 4.0
+    assert "prompt" not in payload

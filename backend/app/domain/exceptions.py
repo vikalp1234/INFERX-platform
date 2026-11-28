@@ -27,3 +27,11 @@ class ModelNotLoadedError(InferxError):
 
 class InferenceFailedError(InferxError):
     """Inference failed at runtime."""
+
+
+class InvalidTimingError(InferxError):
+    """Raised when raw timing stamps are inconsistent (non-monotonic)."""
+
+
+class InvalidArchitectureError(InferxError):
+    """Raised for an invalid model architecture description or KV-cache input."""
