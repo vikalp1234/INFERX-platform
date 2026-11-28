@@ -65,3 +65,53 @@ class TestTransformersContract(ModelExecutionContract):
         torch.manual_seed(123)
         port.generate("Hello", GenerationConfig(max_new_tokens=3, temperature=0.8, seed=99))
         assert torch.rand(1).item() == expected
+
+    def test_stream_text_matches_generate_text_for_greedy(self, port):
+        from app.domain.inference.streaming import StreamFinished, TokenDelta
+        from tests.contract.model_execution_contract import VALID_SPEC
+
+        port.load(VALID_SPEC)
+        cfg = GenerationConfig(max_new_tokens=10)
+        prompt = "The capital of France is"
+        expected = port.generate(prompt, cfg).text
+        items = list(port.stream_generate(prompt, cfg))
+        streamed = "".join(i.text for i in items if isinstance(i, TokenDelta))
+        assert streamed == expected
+        assert isinstance(items[-1], StreamFinished)
+
+    def test_stream_multibyte_never_emits_replacement_char(self, port):
+        from app.domain.inference.streaming import TokenDelta
+        from tests.contract.model_execution_contract import VALID_SPEC
+
+        port.load(VALID_SPEC)
+        items = port.stream_generate(
+            "Reply with the emoji 🌍 and the word мир:", GenerationConfig(max_new_tokens=24)
+        )
+        deltas = [i for i in items if isinstance(i, TokenDelta)]
+        assert deltas
+        assert all("�" not in d.text for d in deltas)
+
+    def test_finish_reason_length_when_limit_hit(self, port):
+        from app.domain.inference.generation import FinishReason
+        from tests.contract.model_execution_contract import VALID_SPEC
+
+        port.load(VALID_SPEC)
+        result = port.generate(
+            "Once upon a time there was a dragon who", GenerationConfig(max_new_tokens=2)
+        )
+        assert result.finish_reason is FinishReason.LENGTH
+
+    def test_stream_failure_becomes_inference_failed_and_adapter_recovers(self, port, monkeypatch):
+        from tests.contract.model_execution_contract import VALID_SPEC
+
+        port.load(VALID_SPEC)
+        real_generate = port._model.generate
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(port._model, "generate", boom)
+        with pytest.raises(InferenceFailedError):
+            list(port.stream_generate("Hello", GenerationConfig(max_new_tokens=2)))
+        monkeypatch.setattr(port._model, "generate", real_generate)
+        assert port.generate("Hello", GenerationConfig(max_new_tokens=2)).output_tokens >= 1

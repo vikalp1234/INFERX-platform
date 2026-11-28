@@ -126,7 +126,7 @@ class ModelExecutionContract:
         port.load(VALID_SPEC)
         cancel = threading.Event()
         stream = port.stream_generate(
-            "Write a long story about a dragon.", GenerationConfig(max_new_tokens=48), cancel
+            "Once upon a time there was a dragon who", GenerationConfig(max_new_tokens=48), cancel
         )
         items = []
         for item in stream:
@@ -140,7 +140,7 @@ class ModelExecutionContract:
     def test_closing_stream_early_allows_next_generate(self, port):
         port.load(VALID_SPEC)
         stream = port.stream_generate(
-            "Write a long story about a dragon.", GenerationConfig(max_new_tokens=48)
+            "Once upon a time there was a dragon who", GenerationConfig(max_new_tokens=48)
         )
         next(stream)
         stream.close()
